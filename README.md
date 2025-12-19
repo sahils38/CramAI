@@ -58,22 +58,6 @@ The app will be running at `http://localhost:5173`
 
 ---
 
-## Project Structure
-
-```
-src/
-├── components/
-│   ├── layout/        # Header, Footer
-│   ├── sections/      # Hero, Features, HowItWorks
-│   ├── upload/        # Video uploader
-│   ├── results/       # Notes, Quiz, Voice player
-│   └── ui/            # Reusable UI components
-├── pages/             # Route pages
-├── lib/               # Utilities
-└── index.css          # Global styles & theme
-```
-
----
 
 ## Author
 
