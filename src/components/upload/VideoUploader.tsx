@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 interface VideoUploaderProps {
-  onUploadComplete: () => void;
+  onUploadComplete: (taskId: string) => void;
   isProcessing: boolean;
 }
 
@@ -29,47 +31,65 @@ export const VideoUploader = ({ onUploadComplete, isProcessing }: VideoUploaderP
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("video/")) {
-      simulateUpload(file);
+      handleFileUpload(file);
     }
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      simulateUpload(file);
+      handleFileUpload(file);
     }
   }, []);
 
-  const simulateUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
+    // Check file size (500MB limit)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error("File too large. Maximum size is 500MB.");
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
-    
-    // Simulate upload progress
-    const interval = setInterval(() => {
+
+    // Simulate progress while uploading
+    const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setUploadedFile(file);
-          return 100;
-        }
-        return prev + Math.random() * 15 + 5;
+        if (prev >= 90) return prev;
+        return prev + Math.random() * 10 + 5;
       });
     }, 200);
+
+    try {
+      const response = await api.uploadVideo(file);
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setIsUploading(false);
+      setUploadedFile(file);
+
+      toast.success("Video uploaded successfully!");
+
+      // Start processing immediately
+      onUploadComplete(response.task_id);
+
+    } catch (error) {
+      clearInterval(progressInterval);
+      setIsUploading(false);
+      setUploadProgress(0);
+      console.error("Upload error:", error);
+      const message = error instanceof Error ? error.message : "Upload failed";
+      toast.error(`Upload error: ${message}`);
+    }
   };
 
   const removeFile = () => {
     setUploadedFile(null);
     setUploadProgress(0);
-  };
-
-  const handleProcess = () => {
-    if (uploadedFile) {
-      onUploadComplete();
-    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -157,38 +177,27 @@ export const VideoUploader = ({ onUploadComplete, isProcessing }: VideoUploaderP
                     {uploadedFile?.name}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {formatFileSize(uploadedFile?.size || 0)} • Ready to process
+                    {formatFileSize(uploadedFile?.size || 0)} • Processing started
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={removeFile}
-                  disabled={isProcessing}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
+                {!isProcessing && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={removeFile}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                )}
               </div>
 
-              <Button
-                variant="hero"
-                size="lg"
-                className="w-full"
-                onClick={handleProcess}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing Lecture...
-                  </>
-                ) : (
-                  <>
-                    Generate Study Materials
-                  </>
-                )}
-              </Button>
+              {isProcessing && (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Processing your lecture...</span>
+                </div>
+              )}
             </Card>
           )}
         </div>

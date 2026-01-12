@@ -6,59 +6,90 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 
 interface VoiceNotesPlayerProps {
-  audioUrl?: string;
-  duration?: number;
+  audioUrl: string;
 }
 
-export const VoiceNotesPlayer = ({ audioUrl, duration = 180 }: VoiceNotesPlayerProps) => {
+export const VoiceNotesPlayer = ({ audioUrl }: VoiceNotesPlayerProps) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(80);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Simulate audio playback
   useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setCurrentTime((prev) => {
-          if (prev >= duration) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleDurationChange = () => setDuration(audio.duration || 0);
+    const handleEnded = () => setIsPlaying(false);
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("durationchange", handleDurationChange);
+    audio.addEventListener("loadedmetadata", handleDurationChange);
+    audio.addEventListener("ended", handleEnded);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("durationchange", handleDurationChange);
+      audio.removeEventListener("loadedmetadata", handleDurationChange);
+      audio.removeEventListener("ended", handleEnded);
     };
-  }, [isPlaying, duration]);
+  }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
 
   const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const handlePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
   const handleSeek = (value: number[]) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = value[0];
     setCurrentTime(value[0]);
   };
 
   const handleSkipBack = () => {
-    setCurrentTime(Math.max(0, currentTime - 10));
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = Math.max(0, audio.currentTime - 10);
   };
 
   const handleSkipForward = () => {
-    setCurrentTime(Math.min(duration, currentTime + 10));
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = Math.min(duration, audio.currentTime + 10);
   };
 
   const handleDownload = () => {
-    toast.success("Voice notes downloaded!");
+    const link = document.createElement("a");
+    link.href = audioUrl;
+    link.download = "cramAI_voice_notes.mp3";
+    link.click();
+    toast.success("Voice notes downloading!");
   };
 
   // Generate waveform bars
@@ -66,6 +97,8 @@ export const VoiceNotesPlayer = ({ audioUrl, duration = 180 }: VoiceNotesPlayerP
 
   return (
     <Card className="overflow-hidden">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+
       <CardHeader className="border-b border-border/50 bg-gradient-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -84,7 +117,7 @@ export const VoiceNotesPlayer = ({ audioUrl, duration = 180 }: VoiceNotesPlayerP
         {/* Waveform visualization */}
         <div className="h-20 flex items-center gap-0.5 mb-6 px-2">
           {waveformBars.map((height, index) => {
-            const isActive = (index / waveformBars.length) * duration <= currentTime;
+            const isActive = duration > 0 && (index / waveformBars.length) * duration <= currentTime;
             return (
               <div
                 key={index}
@@ -104,7 +137,7 @@ export const VoiceNotesPlayer = ({ audioUrl, duration = 180 }: VoiceNotesPlayerP
         <div className="mb-4">
           <Slider
             value={[currentTime]}
-            max={duration}
+            max={duration || 100}
             step={1}
             onValueChange={handleSeek}
             className="cursor-pointer"
@@ -120,12 +153,12 @@ export const VoiceNotesPlayer = ({ audioUrl, duration = 180 }: VoiceNotesPlayerP
           <Button variant="ghost" size="icon" onClick={handleSkipBack}>
             <SkipBack className="w-5 h-5" />
           </Button>
-          
+
           <Button
             variant="hero"
             size="icon"
             className="w-14 h-14 rounded-full"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={handlePlayPause}
           >
             {isPlaying ? (
               <Pause className="w-6 h-6" />
@@ -133,7 +166,7 @@ export const VoiceNotesPlayer = ({ audioUrl, duration = 180 }: VoiceNotesPlayerP
               <Play className="w-6 h-6 ml-0.5" />
             )}
           </Button>
-          
+
           <Button variant="ghost" size="icon" onClick={handleSkipForward}>
             <SkipForward className="w-5 h-5" />
           </Button>
