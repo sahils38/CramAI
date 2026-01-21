@@ -1,19 +1,19 @@
 import { ArrowRight, Play, FileText, Headphones, Brain } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export const HeroSection = () => {
-  const scrollToUpload = () => {
-    document.getElementById('upload')?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-hero opacity-5" />
-      
+
       {/* Animated background elements */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-accent/10 blur-3xl animate-pulse-slow" />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-primary/10 blur-3xl animate-pulse-slow" style={{ animationDelay: '2s' }} />
+      <div
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-primary/10 blur-3xl animate-pulse-slow"
+        style={{ animationDelay: "2s" }}
+      />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
@@ -33,15 +33,18 @@ export const HeroSection = () => {
 
           {/* Subheading */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up opacity-0 stagger-2">
-            Upload any video lecture and instantly get comprehensive notes, voice summaries, and interactive quizzes. Study smarter, not harder.
+            Upload any video lecture and instantly get comprehensive notes, voice summaries, and
+            interactive quizzes. Study smarter, not harder.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-slide-up opacity-0 stagger-3">
-            <Button variant="hero" size="xl" onClick={scrollToUpload} className="w-full sm:w-auto">
-              Get Started Free
-              <ArrowRight className="w-5 h-5" />
-            </Button>
+            <Link to="/app">
+              <Button variant="hero" size="xl" className="w-full sm:w-auto">
+                Get Started Free
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
             <Button variant="glass" size="xl" className="w-full sm:w-auto">
               <Play className="w-5 h-5" />
               Watch Demo
